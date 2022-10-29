@@ -7,26 +7,25 @@ namespace MotivHealthChallenge.Controllers
     [ApiController]
     public class FavoriteController : ControllerBase
     {
+        private readonly IDataRepository dataRepo;
         private readonly DataContext _context;
 
-        public FavoriteController(DataContext context)
+        public FavoriteController(IDataRepository dataRepo, DataContext context)
         {
+            this.dataRepo = dataRepo;
             _context = context;
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<User>>> GetAllUsers()
+        public async Task<List<User>> GetAllUsers()
         {
-            return Ok(await _context.Users.Include(user => user.Favorites).ToListAsync());
+            return await _context.Users.Include(user => user.Favorites).ToListAsync();
         }
 
         [HttpGet("{username}")]
         public async Task<ActionResult<List<User>>> GetUser(string username)
         {
-            var user = await _context.Users
-                .Where(user => user.Username == username)
-                .Include(user => user.Favorites)
-                .ToListAsync();
+            var user = await dataRepo.GetUser(username);
             if (user == null)
                 return NotFound("User not found");
             return Ok(user);

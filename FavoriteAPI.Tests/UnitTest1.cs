@@ -17,16 +17,47 @@ namespace FavoriteAPI.Tests
             var options = new DbContextOptionsBuilder<DataContext>().UseInMemoryDatabase(databaseName: "database_name").Options;
 
             var context = new DataContext(options);
-            var testUsers = GetTestUsers();
-            var controller = new FavoriteController(context);
+            var controller = new FavoriteController(null, context);
             //Act - excution of function
 
             var response = await controller.GetAllUsers();
       
             //Assert - Testing if it's correct
-            Assert.Null(response.Value);
+            Assert.Empty(response);
         }
-        
+
+        [Fact]
+        public async Task GetAllUsers_ReturnsUsers()
+        {
+            //Arrange - my vars
+            var options = new DbContextOptionsBuilder<DataContext>().UseInMemoryDatabase(databaseName: "database_name").Options;
+
+            var context = new DataContext(options);
+            context.Users.AddRange(GetTestUsers());
+            context.SaveChanges();
+            var controller = new FavoriteController(null, context);
+            //Act - excution of function
+
+            var response = await controller.GetAllUsers();
+      
+            //Assert - Testing if it's correct
+            Assert.NotEmpty(response);
+        }
+
+        [Fact]
+        public async Task GetUser_Works()
+        {
+            //Arrange - my vars
+            var repo = A.Fake<IDataRepository>();
+            var controller = new FavoriteController(repo, null);
+            //Act - excution of function
+
+            var response = await controller.GetUser("Test");
+      
+            //Assert - Testing if it's correct
+            Assert.NotNull(response);
+        }
+
         private List<User> GetTestUsers()
         {
             List<User> testUsers = new();
