@@ -7,26 +7,25 @@ namespace MotivHealthChallenge.Controllers
     [ApiController]
     public class FavoriteController : ControllerBase
     {
+        private readonly IDataRepository _dataRepository;
         private readonly DataContext _context;
 
-        public FavoriteController(DataContext context)
+        public FavoriteController(IDataRepository dataRepo, DataContext context)
         {
             _context = context;
+            _dataRepository = dataRepo;
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<User>>> GetAllUsers()
+        public async Task<List<User>> GetAllUsers()
         {
-            return Ok(await _context.Users.Include(user => user.Favorites).ToListAsync());
+            return await _dataRepository.GetAllUsers();
         }
 
         [HttpGet("{username}")]
-        public async Task<ActionResult<List<User>>> GetUser(string username)
+        public async Task<ActionResult<User>> GetUser(string username)
         {
-            var user = await _context.Users
-                .Where(user => user.Username == username)
-                .Include(user => user.Favorites)
-                .ToListAsync();
+            var user = await _dataRepository.GetUser(username);
             if (user == null)
                 return NotFound("User not found");
             return Ok(user);
@@ -36,7 +35,8 @@ namespace MotivHealthChallenge.Controllers
         public async Task<ActionResult<List<Favorite>>> GetCount()
         {
             int count = 0;
-            var data = await _context.Favorites.ToListAsync();
+            var data = await _context.Favorites.ToListAsync(); //_dataRepository.GetFavorites();
+         
             foreach(var item in data)
             {
                 count += 1;
@@ -62,73 +62,67 @@ namespace MotivHealthChallenge.Controllers
         }
 
         [HttpPost("{username}")]
-        public async Task<ActionResult<List<User>>> PostUser(string username, List<Favorite> favorites)
+        public async Task<ActionResult<User>> PostUser(string username, List<Favorite> favorites)
         {
-            var users = await _context.Users
-                .Where(user => user.Username == username)
-                .ToListAsync();
-            if (users == null)
+            var user = await _dataRepository.GetUser(username);
+            if (user == null)
                 return NotFound("User not found");
 
-            foreach (var user in users)
-            {
-                user.Favorites = favorites;
-            }
+            user.Favorites = favorites;
 
             await _context.SaveChangesAsync();
 
-            return Ok(users[0]);
+            return Ok(user.Username);
         }
 
         [HttpPut("{username}")]
         public async Task<ActionResult<List<User>>> PutUser(string username, List<Favorite> favorites)
         {
-            var users = await _context.Users.Where(u => u.Username == username).ToListAsync();
-            if (users == null)
+            var user = await _dataRepository.GetUser(username);
+            if (user == null)
                 return NotFound("User not found");
 
-            var theUser = users[0];
+            
             var favs = await _context.Favorites
-                .Where(fav => fav.UserId == theUser.Id)
+                .Where(fav => fav.UserId == user.Id)
                 .ToListAsync();
             
             foreach(var fav in favs)
             {
                 _context.Favorites.Remove(fav);
             }
-            theUser.Favorites = favorites;
+            user.Favorites = favorites;
             await _context.SaveChangesAsync();
 
-            return Ok(theUser);
+            return Ok(user);
         }
         [HttpPatch("{username}")]
         public async Task<ActionResult<List<User>>> PatchUser(string username, List<Favorite> favorites)
         {
-            var users = await _context.Users
-                .Where(user => user.Username == username)
-                .ToListAsync();
-            if (users == null)
+            var user = await _dataRepository.GetUser(username);
+            if (user == null)
                 return NotFound("User not found");
 
-            foreach (var user in users)
-            {
-                user.Favorites = favorites;
-            }
+            user.Favorites = favorites;
 
             await _context.SaveChangesAsync();
 
-            return Ok(users[0]);
+            return Ok(user);
         }
         [HttpDelete("{username}")]
         public async Task<ActionResult<List<User>>> DeleteUser(string username)
         {
             var users = await _context.Users
                 .Where(user => user.Username == username)
+                .Include(user => user.Favorites)
                 .ToListAsync();
             if (users == null)
                 return NotFound("User not found");
             foreach(var user in users)
+            {
                 _context.Users.Remove(user);
+            }
+            
             await _context.SaveChangesAsync();
             return Ok(await _context.Users.ToListAsync());
         }
